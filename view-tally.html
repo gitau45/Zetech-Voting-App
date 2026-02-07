@@ -4,53 +4,68 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Election Tally | Zetech E-Voting</title>
+
 <style>
 :root {
   --primary:#0F2A44;
-  --primary-light:#163A5F;
   --background:#F5F7FA;
   --white:#fff;
   --muted:#6B7280;
   --shadow:rgba(0,0,0,.1);
   --winner:#22C55E;
 }
-* { box-sizing:border-box; font-family:"Segoe UI",Arial,sans-serif; }
-body{background:var(--background); margin:0; min-height:100vh;}
-header{background:var(--primary); color:#fff; padding:1rem; display:flex; justify-content:space-between; align-items:center;}
-header h1{font-size:1.2rem;}
-header button{background:none; border:none; color:#fff; cursor:pointer; font-weight:600; margin-left:0.5rem;}
-main{padding:1rem;}
-.back-btn{margin-bottom:1rem; padding:.5rem 1rem; border:none; border-radius:6px; background:#6B7280; color:#fff; cursor:pointer;}
-.back-btn:hover{background:#4B5563;}
-.position-card{background:var(--white); padding:1rem; border-radius:12px; box-shadow:0 4px 12px var(--shadow); margin-bottom:1rem;}
-.position-card h3{margin:0 0 .5rem 0;}
-.candidate-card{display:flex; justify-content:space-between; align-items:flex-start; padding:.5rem .8rem; margin-bottom:.3rem; border-radius:8px; background:#F9FAFB; flex-direction:column;}
-.candidate-card span{font-weight:500;}
-.vote-info{margin-top:.3rem; font-size:0.85rem; color:var(--muted);}
-.vote-info ul{margin:0.2rem 0 0 1.2rem; padding:0;}
-.vote-info ul li{margin:0.1rem 0;}
-select{margin-bottom:1rem; padding:.5rem; width:100%;}
-.winner-label{margin-top:.5rem; font-weight:600; color:var(--winner);}
+*{box-sizing:border-box;font-family:"Segoe UI",Arial,sans-serif}
+body{margin:0;background:var(--background)}
+header{background:var(--primary);color:#fff;padding:1rem;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:1.2rem}
+header button{background:none;border:none;color:#fff;font-weight:600;cursor:pointer}
+main{padding:1rem;max-width:1000px;margin:auto}
+
+.back-btn{
+  margin-bottom:1rem;
+  padding:.5rem 1rem;
+  border:none;
+  border-radius:6px;
+  background:#6B7280;
+  color:#fff;
+  cursor:pointer
+}
+.back-btn:hover{background:#4B5563}
+
+.position-card{
+  background:var(--white);
+  padding:1rem;
+  border-radius:12px;
+  box-shadow:0 4px 12px var(--shadow);
+  margin-bottom:1rem
+}
+.candidate-card{
+  background:#F9FAFB;
+  padding:.6rem;
+  border-radius:8px;
+  margin-bottom:.4rem
+}
+.vote-info{font-size:.85rem;color:var(--muted)}
+.winner-label{margin-top:.6rem;font-weight:600;color:var(--winner)}
+select{width:100%;padding:.5rem;margin-bottom:1rem}
 </style>
 </head>
+
 <body>
 
 <header>
-  <h1>Election Tally</h1>
-  <div>
-    <button onclick="logout()">Logout</button>
-  </div>
+  <h1>Election Tally (Admin)</h1>
+  <button onclick="logout()">Logout</button>
 </header>
 
 <main>
-  <!-- Back Button -->
-  <button class="back-btn" onclick="goBack()">← Back to Dashboard</button>
+  <button class="back-btn" onclick="goBack()">← Back to Admin Dashboard</button>
 
-  <h2>Results</h2>
-  <div id="electionSelectContainer">
-    <label>Select Election:</label>
-    <select id="electionSelect"></select>
-  </div>
+  <h2>Election Results</h2>
+
+  <label>Select Election:</label>
+  <select id="electionSelect"></select>
+
   <div id="tallyContainer">Loading results...</div>
 </main>
 
@@ -58,6 +73,12 @@ select{margin-bottom:1rem; padding:.5rem; width:100%;}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* ================= ADMIN AUTH CHECK ================= */
+if (localStorage.getItem("adminLoggedIn") !== "true") {
+  window.location.href = "admin-login.html";
+}
+
+/* ================= FIREBASE ================= */
 const firebaseConfig = {
   apiKey: "AIzaSyA6sugBbX6kvd3RuwznAZkgHzAoEigpnj8",
   authDomain: "zetech-e-voting.firebaseapp.com",
@@ -66,21 +87,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Auth check
-if(localStorage.getItem("studentLoggedIn")!=="true"){ window.location.href="signin.html"; }
-
-const container = document.getElementById("tallyContainer");
+/* ================= UI ================= */
 const electionSelect = document.getElementById("electionSelect");
+const container = document.getElementById("tallyContainer");
 
-// Logout
-window.logout = ()=>{ localStorage.clear(); window.location.href="signin.html"; };
+window.logout = () => {
+  localStorage.removeItem("adminLoggedIn");
+  localStorage.removeItem("adminEmail");
+  window.location.href = "admin-login.html";
+};
 
-// Back button
-function goBack(){
+window.goBack = () => {
   window.location.href = "admin-dashboard.html";
-}
+};
 
-// Load all elections into dropdown
+/* ================= LOAD ELECTIONS ================= */
 async function loadElections(){
   electionSelect.innerHTML = "<option value=''>-- Select Election --</option>";
   const snap = await getDocs(collection(db,"elections"));
@@ -88,92 +109,80 @@ async function loadElections(){
     electionSelect.innerHTML += `<option value="${docu.id}">${docu.data().name}</option>`;
   });
 }
-electionSelect.onchange = ()=> loadResults(electionSelect.value);
 await loadElections();
 
-// Load results with winner
+electionSelect.onchange = () => loadResults(electionSelect.value);
+
+/* ================= LOAD RESULTS ================= */
 async function loadResults(electionId){
   container.innerHTML = "Loading results...";
-  if(!electionId){ container.innerHTML = "<p>Please select an election.</p>"; return; }
+  if(!electionId){
+    container.innerHTML = "<p>Please select an election.</p>";
+    return;
+  }
 
-  try{
-    const positionsSnap = await getDocs(collection(db, `elections/${electionId}/positions`));
-    if(positionsSnap.empty){
-      container.innerHTML="<p>No positions found for this election.</p>";
-      return;
-    }
+  const positionsSnap = await getDocs(
+    collection(db,`elections/${electionId}/positions`)
+  );
 
-    container.innerHTML = "";
+  if(positionsSnap.empty){
+    container.innerHTML = "<p>No positions found.</p>";
+    return;
+  }
 
-    for(const posDoc of positionsSnap.docs){
-      const pos = posDoc.data();
-      const posCard = document.createElement("div");
-      posCard.className="position-card";
-      posCard.innerHTML=`<h3>${pos.title} (${pos.department})</h3>`;
-      container.appendChild(posCard);
+  container.innerHTML = "";
 
-      const candidatesSnap = await getDocs(collection(db, `elections/${electionId}/positions/${posDoc.id}/candidates`));
-      if(candidatesSnap.empty){
-        const p = document.createElement("p");
-        p.textContent="No candidates.";
-        posCard.appendChild(p);
-      } else {
-        let winner = null;
-        let maxVotes = -1;
-        const candidateCards = [];
+  for(const posDoc of positionsSnap.docs){
+    const pos = posDoc.data();
+    const posCard = document.createElement("div");
+    posCard.className="position-card";
+    posCard.innerHTML=`<h3>${pos.title} (${pos.department})</h3>`;
+    container.appendChild(posCard);
 
-        // Build candidate cards and determine winner
-        for(const cDoc of candidatesSnap.docs){
-          const c = cDoc.data();
-          const votes = c.votes || 0;
-          if(votes > maxVotes){
-            maxVotes = votes;
-            winner = c;
-          }
+    const candidatesSnap = await getDocs(
+      collection(db,`elections/${electionId}/positions/${posDoc.id}/candidates`)
+    );
 
-          const card = document.createElement("div");
-          card.className="candidate-card";
-          card.innerHTML = `<span>${c.fullName} (${c.admissionNumber}) - Votes: ${votes}</span>`;
+    let winner=null,maxVotes=-1;
 
-          const votedByList = c.votedBy || [];
-          const voteInfo = document.createElement("div");
-          voteInfo.className = "vote-info";
+    for(const cDoc of candidatesSnap.docs){
+      const c=cDoc.data();
+      const votes=c.votes||0;
 
-          if(votedByList.length === 0){
-            voteInfo.textContent = "No votes yet.";
-          } else {
-            voteInfo.innerHTML = "<strong>Voters:</strong>";
-            const ul = document.createElement("ul");
-            for(const studentId of votedByList){
-              const studentSnap = await getDoc(doc(db,"Students",studentId));
-              const student = studentSnap.exists() ? studentSnap.data() : { fullName: studentId };
-              const li = document.createElement("li");
-              li.textContent = student.fullName;
-              ul.appendChild(li);
-            }
-            voteInfo.appendChild(ul);
-          }
+      if(votes>maxVotes){maxVotes=votes;winner=c}
 
-          card.appendChild(voteInfo);
-          candidateCards.push(card);
+      const card=document.createElement("div");
+      card.className="candidate-card";
+      card.innerHTML=`<strong>${c.fullName}</strong> (${c.admissionNumber}) — Votes: ${votes}`;
+
+      const voters=c.votedBy||[];
+      const info=document.createElement("div");
+      info.className="vote-info";
+
+      if(voters.length){
+        const ul=document.createElement("ul");
+        for(const sid of voters){
+          const sSnap=await getDoc(doc(db,"Students",sid));
+          const name=sSnap.exists()?sSnap.data().fullName:sid;
+          const li=document.createElement("li");
+          li.textContent=name;
+          ul.appendChild(li);
         }
-
-        // Append candidate cards
-        candidateCards.forEach(card=> posCard.appendChild(card));
-
-        // Show winner
-        if(winner){
-          const winnerDiv = document.createElement("div");
-          winnerDiv.className = "winner-label";
-          winnerDiv.textContent = `Winner: ${winner.fullName} (${winner.admissionNumber}) with ${winner.votes} votes`;
-          posCard.appendChild(winnerDiv);
-        }
+        info.appendChild(ul);
+      }else{
+        info.textContent="No votes yet.";
       }
+
+      card.appendChild(info);
+      posCard.appendChild(card);
     }
 
-  } catch(err){
-    console.error(err);
-    container.innerHTML="<p>Error loading results.</p>";
+    if(winner){
+      const win=document.createElement("div");
+      win.className="winner-label";
+      win.textContent=`Winner: ${winner.fullName} with ${winner.votes} votes`;
+      posCard.appendChild(win);
+    }
   }
 }
 </script>
