@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Login | Zetech E-Voting</title>
+
+<style>
+:root {
+  --primary: #0F2A44;
+  --primary-light: #163A5F;
+  --background: #F5F7FA;
+  --text-dark: #1F2933;
+  --text-muted: #4B5563;
+  --white: #FFFFFF;
+  --danger: #D14343;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI", Roboto, Arial, sans-serif; }
+
+body { background: var(--background); min-height:100vh; display:flex; flex-direction:column; }
+
+header { background: var(--primary); color: var(--white); padding:1.2rem; text-align:center; }
+header h1 { font-size:1.4rem; font-weight:600; }
+header p { font-size:0.9rem; opacity:0.9; }
+
+main { flex:1; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
+
+.card { background: var(--white); width:100%; max-width:420px; border-radius:14px; padding:2.2rem 1.5rem; box-shadow:0 12px 30px rgba(0,0,0,0.08); }
+
+.card h2 { text-align:center; color: var(--text-dark); margin-bottom:0.3rem; }
+.card p { text-align:center; color: var(--text-muted); font-size:0.9rem; margin-bottom:1.8rem; }
+
+.form-group { margin-bottom:1.3rem; }
+label { font-size:0.85rem; font-weight:600; color: var(--text-dark); display:block; margin-bottom:0.4rem; }
+
+input { width:100%; padding:0.9rem; border-radius:10px; border:1.5px solid #D1D5DB; font-size:0.95rem; outline:none; transition:border 0.2s ease; }
+input:focus { border-color: var(--primary); }
+
+.password-wrapper { position:relative; }
+.toggle-password { position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; opacity:0.6; }
+.toggle-password svg { width:20px; height:20px; fill: var(--text-muted); }
+
+.btn-login { width:100%; margin-top:0.5rem; padding:1rem; border-radius:12px; border:none; font-size:1rem; font-weight:600; background: var(--primary); color: #fff; cursor:pointer; transition:background 0.3s ease, transform 0.2s ease; }
+.btn-login:hover { background: var(--primary-light); }
+.btn-login:active { transform:scale(0.97); }
+
+.error { display:none; text-align:center; margin-top:1rem; font-size:0.85rem; color: var(--danger); }
+
+footer { text-align:center; padding:0.8rem; font-size:0.8rem; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Zetech University</h1>
+  <p>Admin Portal – E-Voting System</p>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Admin Login</h2>
+    <p>Authorized personnel only</p>
+
+    <form onsubmit="loginAdmin(event)">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter admin username" required />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" placeholder="Enter password" required />
+          <span class="toggle-password" onclick="togglePassword()">
+            <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login">Login</button>
+    </form>
+
+    <div class="error" id="errorMsg"></div>
+  </div>
+</main>
+
+<footer>
+  © 2026 Zetech University
+</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA6sugBbX6kvd3RuwznAZkgHzAoEigpnj8",
+  authDomain: "zetech-e-voting.firebaseapp.com",
+  projectId: "zetech-e-voting",
+  storageBucket: "zetech-e-voting.firebasestorage.app",
+  messagingSenderId: "223450946411",
+  appId: "1:223450946411:web:021848c8f6a98de7034a2e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const errorMsg = document.getElementById("errorMsg");
+
+function togglePassword() {
+  const pwd = document.getElementById("password");
+  pwd.type = pwd.type === "password" ? "text" : "password";
+}
+
+window.loginAdmin = async (e) => {
+  e.preventDefault();
+
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  try {
+    // Query Firestore Admins collection by Name
+    const q = query(collection(db, "Admins"), where("Name", "==", username));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      errorMsg.innerText = "Admin not found";
+      errorMsg.style.display = "block";
+      return;
+    }
+
+    const admin = snap.docs[0].data();
+
+    if (admin.Password !== password) {
+      errorMsg.innerText = "Incorrect password";
+      errorMsg.style.display = "block";
+      return;
+    }
+
+    // Login successful → save login in localStorage
+    localStorage.setItem("adminLoggedIn", "true");
+    window.location.href = "admin-dashboard.html";
+
+  } catch (err) {
+    console.error(err);
+    errorMsg.innerText = "Login failed, try again";
+    errorMsg.style.display = "block";
+  }
+};
+</script>
+
+</body>
+</html>

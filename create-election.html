@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Election Management | Zetech E-Voting</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background:#F5F7FA;
+  padding:1rem;
+}
+h1,h2 { text-align:center; color:#0F2A44; }
+section {
+  background:#fff;
+  max-width:650px;
+  margin:1.5rem auto;
+  padding:1.5rem;
+  border-radius:10px;
+  box-shadow:0 6px 15px rgba(0,0,0,.1);
+}
+label { display:block; margin-top:1rem; }
+input, select { width:100%; padding:.7rem; margin-top:.3rem; }
+button {
+  margin-top:1rem;
+  padding:1rem;
+  width:100%;
+  background:#0F2A44;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+}
+button.danger { background:#8B0000; }
+button.back { background:#6B7280; }
+p { margin-top:.7rem; }
+small { color:#666; }
+</style>
+</head>
+<body>
+
+<!-- BACK BUTTON -->
+<section style="max-width:650px; margin-bottom:0;">
+  <button class="back" id="backBtn">
+    ← Back to Admin Dashboard
+  </button>
+</section>
+
+<h1>Election Management</h1>
+
+<!-- CREATE ELECTION -->
+<section>
+<h2>Create Election</h2>
+
+<label>Election Name</label>
+<input id="electionName" placeholder="Student Elections 2026">
+
+<label>Start Date</label>
+<input type="date" id="startDate">
+
+<label>End Date</label>
+<input type="date" id="endDate">
+
+<button id="createElectionBtn">Create Election</button>
+</section>
+
+<!-- MANAGE ELECTION -->
+<section>
+<h2>Manage Election</h2>
+
+<label>Select Election</label>
+<select id="manageElectionSelect"></select>
+
+<p><strong>Period:</strong> <span id="periodText">—</span></p>
+<p><strong>Status:</strong> <span id="statusText">—</span></p>
+
+<button id="activateBtn">Activate Election</button>
+<button id="endBtn" class="danger">End Election</button>
+</section>
+
+<!-- ADD POSITION -->
+<section>
+<h2>Add Position</h2>
+<small>Positions belong to a selected election</small>
+
+<label>Election</label>
+<select id="electionSelect"></select>
+
+<label>Position Title</label>
+<input id="positionTitle" placeholder="President">
+
+<label>Department</label>
+<input id="department" placeholder="ICT">
+
+<button id="addPositionBtn">Add Position</button>
+</section>
+
+<!-- ADD CANDIDATE -->
+<section>
+<h2>Add Candidate</h2>
+
+<label>Position</label>
+<select id="positionSelect"></select>
+
+<label>Full Name</label>
+<input id="candidateName">
+
+<label>Admission Number</label>
+<input id="admission">
+
+<button id="addCandidateBtn">Add Candidate</button>
+</section>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  updateDoc,
+  doc,
+  Timestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyA6sugBbX6kvd3RuwznAZkgHzAoEigpnj8",
+  authDomain: "zetech-e-voting.firebaseapp.com",
+  projectId: "zetech-e-voting",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* DOM REFERENCES */
+const electionSelect = document.getElementById("electionSelect");
+const manageSelect = document.getElementById("manageElectionSelect");
+const positionSelect = document.getElementById("positionSelect");
+const periodText = document.getElementById("periodText");
+const statusText = document.getElementById("statusText");
+
+/* BACK BUTTON FUNCTION */
+document.getElementById("backBtn").onclick = () => {
+  window.location.href = "admin-dashboard.html";
+};
+
+/* CREATE ELECTION */
+document.getElementById("createElectionBtn").onclick = async () => {
+  if(!electionName.value || !startDate.value || !endDate.value){
+    alert("Please fill all fields");
+    return;
+  }
+  await addDoc(collection(db,"elections"),{
+    name: electionName.value,
+    startAt: Timestamp.fromDate(new Date(startDate.value)),
+    endAt: Timestamp.fromDate(new Date(endDate.value)),
+    status: "draft",
+    createdAt: Timestamp.now()
+  });
+  alert("Election created");
+  loadElections();
+};
+
+/* LOAD ELECTIONS */
+async function loadElections(){
+  electionSelect.innerHTML="";
+  manageSelect.innerHTML="";
+
+  const snap = await getDocs(collection(db,"elections"));
+  snap.forEach(docu=>{
+    electionSelect.innerHTML +=
+      `<option value="${docu.id}">${docu.data().name}</option>`;
+    manageSelect.innerHTML +=
+      `<option value="${docu.id}">${docu.data().name}</option>`;
+  });
+
+  loadElectionDetails();
+  loadPositions();
+}
+
+/* LOAD ELECTION DETAILS */
+manageSelect.onchange = loadElectionDetails;
+async function loadElectionDetails(){
+  const id = manageSelect.value;
+  if(!id) return;
+
+  const snap = await getDoc(doc(db,"elections",id));
+  const d = snap.data();
+  periodText.textContent = `${d.startAt.toDate().toLocaleDateString()} → ${d.endAt.toDate().toLocaleDateString()}`;
+  statusText.textContent = d.status;
+}
+
+/* ACTIVATE / END ELECTION */
+document.getElementById("activateBtn").onclick = async ()=>{
+  await updateDoc(doc(db,"elections",manageSelect.value),{ status:"active" });
+  alert("Election is now ACTIVE");
+  loadElectionDetails();
+};
+
+document.getElementById("endBtn").onclick = async ()=>{
+  await updateDoc(doc(db,"elections",manageSelect.value),{ status:"ended" });
+  alert("Election has ENDED");
+  loadElectionDetails();
+};
+
+/* ADD POSITION */
+document.getElementById("addPositionBtn").onclick = async () => {
+  if(!positionTitle.value || !department.value) { alert("Fill all fields"); return; }
+  await addDoc(
+    collection(db,"elections",electionSelect.value,"positions"),
+    {
+      title: positionTitle.value,
+      department: department.value,
+      createdAt: Timestamp.now()
+    }
+  );
+  alert("Position added");
+  loadPositions();
+};
+
+/* LOAD POSITIONS */
+electionSelect.onchange = loadPositions;
+async function loadPositions(){
+  positionSelect.innerHTML="";
+  const electionId = electionSelect.value;
+  if(!electionId) return;
+
+  const snap = await getDocs(collection(db,"elections",electionId,"positions"));
+  snap.forEach(p=>{
+    positionSelect.innerHTML +=
+      `<option value="${p.id}">${p.data().title} (${p.data().department})</option>`;
+  });
+}
+
+/* ADD CANDIDATE */
+document.getElementById("addCandidateBtn").onclick = async () => {
+  if(!candidateName.value || !admission.value || !positionSelect.value){
+    alert("Fill all fields");
+    return;
+  }
+  await addDoc(
+    collection(
+      db,
+      "elections",
+      electionSelect.value,
+      "positions",
+      positionSelect.value,
+      "candidates"
+    ),
+    {
+      fullName: candidateName.value,
+      admissionNumber: admission.value,
+      votes: 0,        // initialize votes
+      votedBy: [],     // initialize votedBy
+      createdAt: Timestamp.now()
+    }
+  );
+  alert("Candidate added with votes and votedBy initialized!");
+};
+
+loadElections();
+</script>
+
+</body>
+</html>

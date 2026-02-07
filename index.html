@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zetech E-Voting</title>
+
+  <style>
+    :root {
+      --primary: #0F2A44;
+      --primary-light: #163A5F;
+      --background: #F5F7FA;
+      --text-dark: #1F2933;
+      --text-muted: #4B5563;
+      --white: #FFFFFF;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--background);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--primary);
+      color: var(--white);
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+
+    header p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: var(--white);
+      width: 100%;
+      max-width: 420px;
+      border-radius: 14px;
+      padding: 2.2rem 1.5rem;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .card h2 {
+      color: var(--text-dark);
+      margin-bottom: 0.4rem;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 1rem;
+      margin-bottom: 1.2rem;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .btn-admin {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    .btn-admin:hover {
+      background: var(--primary-light);
+    }
+
+    .btn-admin svg {
+      fill: var(--white);
+    }
+
+    .btn-student {
+      background: var(--background);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+
+    .btn-student:hover {
+      background: #E9EEF4;
+    }
+
+    .btn-student svg {
+      fill: var(--primary);
+    }
+
+    footer {
+      text-align: center;
+      padding: 0.8rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    @media (min-width: 768px) {
+      header h1 {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Zetech University</h1>
+    <p>Secure Online Voting System</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Welcome</h2>
+      <p>Select your role to continue</p>
+
+      <!-- Admin Button -->
+      <button class="btn btn-admin" onclick="location.href='admin.html'">
+        <!-- Shield Icon -->
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3z"/>
+        </svg>
+        Admin
+      </button>
+
+      <!-- Student Button -->
+      <button class="btn btn-student" onclick="location.href='signin.html'">
+        <!-- User Icon -->
+        <svg viewBox="0 0 24 24">
+          <path d="M12 12c2.8 0 5-2.2 5-5s-2.2-5-5-5-5 2.2-5 5 2.2 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
+        </svg>
+        Student
+      </button>
+    </div>
+  </main>
+
+  <footer>
+    © 2026 Zetech University
+  </footer>
+
+</body>
+</html>

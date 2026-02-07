@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verify Users | Zetech E-Voting</title>
+<style>
+:root {
+  --primary: #0F2A44;
+  --background: #F5F7FA;
+  --text-dark: #1F2933;
+  --success: #22C55E;
+  --danger: #D14343;
+}
+
+body {
+  background: var(--background);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  padding: 1rem;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+header h1 { color: var(--text-dark); }
+header button {
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+}
+
+th, td {
+  padding: 0.8rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+th { background: var(--primary); color: #fff; }
+tr:last-child td { border-bottom: none; }
+
+button.approve {
+  background: var(--success);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button.approve:disabled { background: #ccc; cursor: not-allowed; }
+
+.message {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.message.success { color: var(--success); }
+.message.error { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pending Student Approvals</h1>
+  <button onclick="goBack()">Back</button>
+</header>
+
+<table id="studentsTable">
+  <thead>
+    <tr>
+      <th>Full Name</th>
+      <th>Admission Number</th>
+      <th>Email</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<div class="message" id="msg"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA6sugBbX6kvd3RuwznAZkgHzAoEigpnj8",
+  authDomain: "zetech-e-voting.firebaseapp.com",
+  projectId: "zetech-e-voting",
+  storageBucket: "zetech-e-voting.firebasestorage.app",
+  messagingSenderId: "223450946411",
+  appId: "1:223450946411:web:021848c8f6a98de7034a2e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Redirect if admin not logged in
+if (!localStorage.getItem("adminLoggedIn")) {
+  window.location.href = "admin.html";
+}
+
+const studentsTable = document.getElementById("studentsTable").querySelector("tbody");
+const msg = document.getElementById("msg");
+
+// Load pending students
+async function loadPendingStudents() {
+  studentsTable.innerHTML = "";
+  const snap = await getDocs(query(collection(db, "Students"), where("approved", "==", false)));
+
+  if (snap.empty) {
+    studentsTable.innerHTML = `<tr><td colspan="4">No pending students</td></tr>`;
+    return;
+  }
+
+  snap.forEach(docSnap => {
+    const student = docSnap.data();
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${student.fullName}</td>
+      <td>${student.admissionNumber}</td>
+      <td>${student.email}</td>
+      <td>
+        <button class="approve" onclick="approveStudent('${docSnap.id}', this)">Approve</button>
+      </td>
+    `;
+    studentsTable.appendChild(tr);
+  });
+}
+
+// Approve student function
+window.approveStudent = async function(id, btn) {
+  try {
+    btn.disabled = true;
+    await updateDoc(doc(db, "Students", id), { approved: true });
+    btn.innerText = "Approved";
+    msg.innerText = "Student approved successfully!";
+    msg.className = "message success";
+    loadPendingStudents();
+  } catch (err) {
+    console.error(err);
+    msg.innerText = "Failed to approve student";
+    msg.className = "message error";
+    btn.disabled = false;
+  }
+};
+
+// Back to dashboard
+window.goBack = function() {
+  window.location.href = "admin-dashboard.html";
+};
+
+// Initial load
+loadPendingStudents();
+</script>
+
+</body>
+</html>

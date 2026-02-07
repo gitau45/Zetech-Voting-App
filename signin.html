@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Access | Zetech E-Voting</title>
+<style>
+:root {
+  --primary:#0F2A44; 
+  --primary-light:#163A5F; 
+  --background:#F5F7FA; 
+  --white:#fff; 
+  --danger:#D14343; 
+  --success:#22C55E;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",Arial,sans-serif;}
+body{background:var(--background);min-height:100vh;display:flex;flex-direction:column;}
+header{background:var(--primary);color:var(--white);padding:1.2rem;text-align:center;position:relative;}
+header button{position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:var(--danger);color:#fff;border:none;padding:0.5rem 1rem;border-radius:8px;cursor:pointer;}
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+.card{background:var(--white);width:100%;max-width:440px;border-radius:16px;padding:2rem;box-shadow:0 14px 35px rgba(0,0,0,0.08);}
+.form{display:none;}
+.form.active{display:block;}
+.form-group{margin-bottom:1rem;}
+label{display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;}
+input{width:100%;padding:0.8rem;border-radius:10px;border:1.5px solid #D1D5DB;}
+.btn{width:100%;padding:1rem;border-radius:12px;border:none;background:var(--primary);color:#fff;font-weight:600;cursor:pointer;}
+.switch{margin-top:1rem;text-align:center;font-size:0.9rem;}
+.switch span{color:var(--primary);cursor:pointer;font-weight:600;}
+.error,.success{text-align:center;font-size:0.85rem;margin-top:1rem;display:none;}
+.error{color:var(--danger);}
+.success{color:var(--success);}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Zetech University</h1>
+<p>Student Access – E-Voting System</p>
+<button id="exitBtn" onclick="logout()">Exit</button>
+</header>
+
+<main>
+<div class="card">
+
+<div id="loginForm" class="form active">
+<h2>Student Login</h2>
+<form onsubmit="loginStudent(event)">
+<div class="form-group"><label>School Email</label><input type="email" id="loginEmail" required></div>
+<div class="form-group"><label>Password</label><input type="password" id="loginPass" required></div>
+<button class="btn">Login</button>
+</form>
+<div class="switch">No account? <span onclick="showRegister()">Register</span></div>
+</div>
+
+<div id="registerForm" class="form">
+<h2>Student Registration</h2>
+<form onsubmit="registerStudent(event)">
+<div class="form-group"><label>Full Name</label><input type="text" id="regName" required></div>
+<div class="form-group"><label>Admission Number</label><input type="text" id="regAdm" required></div>
+<div class="form-group"><label>School Email</label><input type="email" id="regEmail" required></div>
+<div class="form-group"><label>Password</label><input type="password" id="regPass" required></div>
+<div class="form-group"><label>Confirm Password</label><input type="password" id="regConfirm" required></div>
+<button class="btn">Register</button>
+</form>
+<div class="switch">Already registered? <span onclick="showLogin()">Login</span></div>
+</div>
+
+<div class="error" id="errorMsg"></div>
+<div class="success" id="successMsg"></div>
+
+</div>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyA6sugBbX6kvd3RuwznAZkgHzAoEigpnj8",
+  authDomain:"zetech-e-voting.firebaseapp.com",
+  projectId:"zetech-e-voting"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loginForm = document.getElementById("loginForm");
+const registerForm = document.getElementById("registerForm");
+const errorMsg = document.getElementById("errorMsg");
+const successMsg = document.getElementById("successMsg");
+const exitBtn = document.getElementById("exitBtn");
+
+window.showRegister = ()=>{ loginForm.classList.remove("active"); registerForm.classList.add("active"); };
+window.showLogin = ()=>{ registerForm.classList.remove("active"); loginForm.classList.add("active"); };
+
+function showError(msg){ errorMsg.innerText=msg; errorMsg.style.display="block"; successMsg.style.display="none"; }
+function showSuccess(msg){ successMsg.innerText=msg; successMsg.style.display="block"; errorMsg.style.display="none"; }
+
+window.registerStudent = async (e)=>{
+  e.preventDefault();
+  const name=regName.value, adm=regAdm.value, email=regEmail.value, pass=regPass.value, confirm=regConfirm.value;
+  if(pass!==confirm){ showError("Passwords do not match"); return; }
+  try{
+    const cred = await createUserWithEmailAndPassword(auth,email,pass);
+    await addDoc(collection(db,"Students"),{
+      uid:cred.user.uid, fullName:name, admissionNumber:adm, email:email,
+      approved:false, hasVoted:false, createdAt:serverTimestamp()
+    });
+    showSuccess("Registered successfully. Await admin approval."); showLogin();
+  }catch(err){ showError(err.message); }
+};
+
+window.loginStudent = async (e)=>{
+  e.preventDefault();
+  const email=loginEmail.value, pass=loginPass.value;
+  try{
+    const cred = await signInWithEmailAndPassword(auth,email,pass);
+    const q = query(collection(db,"Students"),where("uid","==",cred.user.uid));
+    const snap = await getDocs(q);
+    if(snap.empty){ showError("Student record not found"); return; }
+    const studentDoc = snap.docs[0]; const student = studentDoc.data();
+    if(!student.approved){ showError("Account pending admin approval"); return; }
+
+    localStorage.setItem("studentLoggedIn","true");
+    localStorage.setItem("studentUID",cred.user.uid);
+    localStorage.setItem("studentDocId",studentDoc.id);
+    localStorage.setItem("studentName",student.fullName);
+    window.location.href="stdash.html";
+
+  }catch(err){ showError("Invalid login credentials"); }
+};
+
+// ----------------- Exit / Logout -----------------
+window.logout = async ()=>{
+  await signOut(auth);
+  localStorage.clear();
+  window.location.href="index.html"; // Redirect to main access page
+};
+
+// Auto redirect if already logged in
+if(localStorage.getItem("studentLoggedIn")==="true"){ window.location.href="stdash.html"; }
+
+</script>
+</body>
+</html>
